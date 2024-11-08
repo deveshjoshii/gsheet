@@ -1,0 +1,6 @@
+Url,Fieldname,Value,Action,Status,TagType
+https://dev1.credello.com/credit-cards/small-business/capital-one/,en,page_view,,,gta
+https://dev1.credello.com/credit-cards/small-business/capital-one/,en,applynow-creditcard,click|.spark-1-classic,,
+https://dev1.credello.com/credit-cards/small-business/capital-one/,ep.Label,https://dev1.credello.com/credit-cards/small-business/capital-one/,click|.spark-1-classic,,
+https://dev1.credello.com/credit-cards/small-business/capital-one/,ep.Category,applynow-creditcard,click|.spark-1-classic,,
+https://dev1.credello.com/credit-cards/small-business/capital-one/,ep.Action,Spark 1% Classic,click|.spark-1-classic,,
