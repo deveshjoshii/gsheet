@@ -122,9 +122,9 @@ describe('Intercept request, perform actions, and process values', () => {
   
   // Function to compare Google Sheets data with intercepted request data
   function compareWithGoogleSheetData(sheetData, requestData) {
-    sheetData.forEach(row => {
-      const fieldName = row[2]; // Assuming the 'Fieldname' is in the second column
-      const expectedValue = row[3]; // Assuming the 'Value' is in the third column
+    sheetData.forEach((row, rowIndex) => {
+      const fieldName = row[2]; // Assuming 'Fieldname' is in the third column
+      const expectedValue = row[3]; // Assuming 'Value' is in the fourth column
   
       let status = 'Fail'; // Default status
       let actualValue = '';
@@ -149,6 +149,13 @@ describe('Intercept request, perform actions, and process values', () => {
   
       // Log status
       cy.log(`Field: ${fieldName}, Status: ${status}`);
+  
+      // Update the status in the Google Sheet
+      const sheetRange = `Sheet1!F${rowIndex + 1}`; // Assuming status is written in column F
+      cy.task('writeGoogleSheet', { range: sheetRange, values: [[status]] })
+        .then(result => {
+          cy.log(`Update result for row ${rowIndex + 1}: ${result}`);
+        });
     });
   }
   
