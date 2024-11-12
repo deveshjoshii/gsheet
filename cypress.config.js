@@ -4,14 +4,19 @@ const path = require('path');
 const sqlite3 = require('sqlite3').verbose(); // SQLite package
 const moment = require('moment-timezone'); // For handling timezones
 
-// Use an environment variable for the service account key file path
-const SERVICE_ACCOUNT_KEY_PATH = process.env.GOOGLE_CREDENTIALS_FILE_PATH || 'cypress/fixtures/credentials.json';
+// Use the environment variable directly
+const SERVICE_ACCOUNT_KEY_PATH = process.env.GOOGLE_CREDENTIALS_FILE_PATH;
 
 async function authorize() {
+  if (!SERVICE_ACCOUNT_KEY_PATH) {
+    throw new Error('GOOGLE_CREDENTIALS_FILE_PATH is not set.');
+  }
+
   const auth = new google.auth.GoogleAuth({
     keyFile: SERVICE_ACCOUNT_KEY_PATH,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
+
   return auth.getClient();
 }
 
