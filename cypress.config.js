@@ -4,8 +4,8 @@ const path = require('path');
 const sqlite3 = require('sqlite3').verbose(); // SQLite package
 const moment = require('moment-timezone'); // For handling timezones
 
-// Path to the service account key file
-const SERVICE_ACCOUNT_KEY_PATH = 'cypress/fixtures/credentials.json';
+// Use an environment variable for the service account key file path
+const SERVICE_ACCOUNT_KEY_PATH = process.env.GOOGLE_CREDENTIALS_FILE_PATH || 'cypress/fixtures/credentials.json';
 
 async function authorize() {
   const auth = new google.auth.GoogleAuth({
