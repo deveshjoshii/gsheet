@@ -1,12 +1,27 @@
 const { defineConfig } = require('cypress');
 const { google } = require('googleapis');
-const path = require('path');
-const sqlite3 = require('sqlite3').verbose(); // SQLite package
+const { Pool } = require('pg'); // PostgreSQL package
 const moment = require('moment-timezone'); // For handling timezones
 const fs = require('fs');
+<<<<<<< HEAD
 
 // Use the environment variable directly
+=======
+const path = require('path');
+>>>>>>> dbfix
 
+
+// Load database credentials from dbConfig.json
+let dbConfig;
+try {
+  dbConfig = JSON.parse(fs.readFileSync(path.join(__dirname, 'dbConfig.json'), 'utf-8'));
+} catch (err) {
+  console.error('Error loading dbConfig.json:', err);
+  throw new Error('Unable to load database configuration');
+}
+
+// PostgreSQL connection configuration
+const pool = new Pool(dbConfig);
 
 async function authorize() {
   const SERVICE_ACCOUNT_KEY_PATH = process.env.GOOGLE_CREDENTIALS_FILE_PATH;
@@ -58,53 +73,50 @@ async function writeGoogleSheet({ spreadsheetId, range, values }) {
   return 'Update successful';
 }
 
-// New function to copy updated data from Google Sheets to the SQLite database
+// New function to copy updated data from Google Sheets to the PostgreSQL database
 async function dumpSheetDataToDatabase(sheetData) {
-  const dbPath = path.resolve('analytic_data.sqlite');
-  const db = new sqlite3.Database(dbPath);
-
-  db.serialize(() => {
-    // Create the table if it doesn't exist with an auto-increment 'id' and 'analytic_id'
-    db.run(`
+  try {
+    // Create the table if it doesn't exist
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS analytics_data (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,    -- Auto-incrementing primary key
-        analytic_id TEXT NOT NULL,               -- The original ID from Google Sheets
+        id SERIAL PRIMARY KEY,                 
+        analytic_id VARCHAR(255) NOT NULL,     
         url TEXT,
-        fieldname TEXT,
+        fieldname VARCHAR(255),
         value TEXT,
-        action TEXT,
-        status TEXT,
+        action VARCHAR(255),
+        status VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // Prepare an insert statement
-    const stmt = db.prepare(`
-      INSERT INTO analytics_data (analytic_id, url, fieldname, value, action, status, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-
     // Insert data from the Google Sheet
-    sheetData.slice(1).forEach(row => {
-      const analyticId = row[0];    // The ID from Google Sheets
+    const insertQuery = `
+      INSERT INTO analytics_data (analytic_id, url, fieldname, value, action, status, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `;
+
+    for (let i = 1; i < sheetData.length; i++) {
+      const row = sheetData[i];
+      const analyticId = row[0];
       const url = row[1];
       const fieldname = row[2];
       const value = row[3];
       const action = row[4];
       const status = row[5];
-      const createdAt = moment().tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm:ss'); // Timestamp in IST
+      const createdAt = moment().tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm:ss');
 
-      stmt.run(analyticId, url, fieldname, value, action, status, createdAt);
-    });
+      // Execute the query
+      await pool.query(insertQuery, [analyticId, url, fieldname, value, action, status, createdAt]);
+    }
 
-    stmt.finalize();
-  });
-
-  db.close();
-  return 'Data from Google Sheets dumped into the database successfully';
+    console.log('Data from Google Sheets dumped into the PostgreSQL database successfully');
+    return 'Data from Google Sheets dumped into the database successfully';
+  } catch (error) {
+    console.error('Failed to insert data into the PostgreSQL database:', error);
+    throw error;
+  }
 }
-
-  
 
 module.exports = defineConfig({
   e2e: {
@@ -131,13 +143,15 @@ module.exports = defineConfig({
 
           return rows; // Return the data fetched from the sheet
         },
+
         async writeGoogleSheet({ range, values }) {
           const spreadsheetId = '1_dfBa_dLSQDm4QqHUMIvrN9adNL6ga-lUGp4xFDNaqQ'; // Replace with your actual sheet ID
           return await writeGoogleSheet({ spreadsheetId, range, values });
         },
+
         async dumpSheetDataToDatabase({ sheetData }) {
           return await dumpSheetDataToDatabase(sheetData);
-        }
+        },
       });
     },
   },

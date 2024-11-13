@@ -8,6 +8,7 @@
     "googleapis": "^144.0.0",
     "moment-timezone": "^0.5.46",
     "papaparse": "^5.4.1",
+    "pg": "^8.13.1",
     "sqlite3": "^5.1.7"
   }
 }
