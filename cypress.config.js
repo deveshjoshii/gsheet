@@ -5,6 +5,9 @@ const moment = require('moment-timezone'); // For handling timezones
 const fs = require('fs');
 const path = require('path');
 
+// Path to the service account key file
+const SERVICE_ACCOUNT_KEY_PATH = 'cypress/fixtures/credentials.json';
+
 // Load database credentials from dbConfig.json
 let dbConfig;
 try {
@@ -17,39 +20,11 @@ try {
 // PostgreSQL connection configuration
 const pool = new Pool(dbConfig);
 
-// Use the environment variable directly to read the credentials file
 async function authorize() {
-  const SERVICE_ACCOUNT_KEY_PATH = process.env.GOOGLE_CREDENTIALS_FILE_PATH;
-
-  if (!SERVICE_ACCOUNT_KEY_PATH) {
-    throw new Error('GOOGLE_CREDENTIALS_FILE_PATH is not set.');
-  }
-
-  // Read and parse the credentials file
-  let credentials;
-  try {
-    credentials = JSON.parse(fs.readFileSync(SERVICE_ACCOUNT_KEY_PATH, 'utf8'));
-  } catch (error) {
-    throw new Error('Failed to read or parse the service account key file: ' + error.message);
-  }
-
-  // Check if private_key and client_email are present and valid
-  if (typeof credentials.private_key !== 'string' || typeof credentials.client_email !== 'string') {
-    throw new Error('Invalid private_key or client_email format in the credentials file.');
-  }
-
-  // Create a new instance of GoogleAuth
   const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: credentials.client_email,
-      private_key: credentials.private_key,
-    },
+    keyFile: SERVICE_ACCOUNT_KEY_PATH,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
-
-  console.log('private_key exists:', !!credentials.private_key);
-  console.log('client_email exists:', !!credentials.client_email);
-
   return auth.getClient();
 }
 
@@ -69,7 +44,7 @@ async function writeGoogleSheet({ spreadsheetId, range, values }) {
   return 'Update successful';
 }
 
-// Function to copy updated data from Google Sheets to the PostgreSQL database
+// New function to copy updated data from Google Sheets to the PostgreSQL database
 async function dumpSheetDataToDatabase(sheetData) {
   try {
     // Create the table if it doesn't exist
