@@ -3,21 +3,19 @@ const { google } = require('googleapis');
 const { Pool } = require('pg'); // PostgreSQL package
 const moment = require('moment-timezone'); // For handling timezones
 const fs = require('fs');
-<<<<<<< HEAD
-
-// Use the environment variable directly
-=======
 const path = require('path');
->>>>>>> dbfix
 
-
-// Load database credentials from dbConfig.json
+// Load database credentials from the environment variable DB_CONNECTION_SECRET
 let dbConfig;
 try {
-  dbConfig = JSON.parse(fs.readFileSync(path.join(__dirname, 'dbConfig.json'), 'utf-8'));
+  const dbConfigString = process.env.DB_CONNECTION_SECRET;
+  if (!dbConfigString) {
+    throw new Error('DB_CONNECTION_SECRET is not set.');
+  }
+  dbConfig = JSON.parse(dbConfigString);
 } catch (err) {
-  console.error('Error loading dbConfig.json:', err);
-  throw new Error('Unable to load database configuration');
+  console.error('Error loading DB_CONNECTION_SECRET:', err);
+  throw new Error('Unable to load database configuration from the secret.');
 }
 
 // PostgreSQL connection configuration
@@ -38,12 +36,10 @@ async function authorize() {
     throw new Error('Failed to read or parse the service account key file: ' + error.message);
   }
 
-  // Check if private_key and client_email are present and valid
   if (typeof credentials.private_key !== 'string' || typeof credentials.client_email !== 'string') {
     throw new Error('Invalid private_key or client_email format in the credentials file.');
   }
 
-  // Create a new instance of GoogleAuth
   const auth = new google.auth.GoogleAuth({
     credentials: {
       client_email: credentials.client_email,
@@ -51,8 +47,6 @@ async function authorize() {
     },
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
-  console.log('private_key exists:', !!credentials.private_key);
-  console.log('client_email exists:', !!credentials.client_email);
 
   return auth.getClient();
 }
@@ -76,7 +70,6 @@ async function writeGoogleSheet({ spreadsheetId, range, values }) {
 // New function to copy updated data from Google Sheets to the PostgreSQL database
 async function dumpSheetDataToDatabase(sheetData) {
   try {
-    // Create the table if it doesn't exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS analytics_data (
         id SERIAL PRIMARY KEY,                 
@@ -90,7 +83,6 @@ async function dumpSheetDataToDatabase(sheetData) {
       )
     `);
 
-    // Insert data from the Google Sheet
     const insertQuery = `
       INSERT INTO analytics_data (analytic_id, url, fieldname, value, action, status, created_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -106,7 +98,6 @@ async function dumpSheetDataToDatabase(sheetData) {
       const status = row[5];
       const createdAt = moment().tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm:ss');
 
-      // Execute the query
       await pool.query(insertQuery, [analyticId, url, fieldname, value, action, status, createdAt]);
     }
 
@@ -141,7 +132,7 @@ module.exports = defineConfig({
             return [];
           }
 
-          return rows; // Return the data fetched from the sheet
+          return rows;
         },
 
         async writeGoogleSheet({ range, values }) {
