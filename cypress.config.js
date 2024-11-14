@@ -3,7 +3,6 @@ const { google } = require('googleapis');
 const { Pool } = require('pg'); // PostgreSQL package
 const moment = require('moment-timezone'); // For handling timezones
 const fs = require('fs');
-const path = require('path');
 
 // Load database credentials from the environment variable DB_CONNECTION_SECRET
 let dbConfig;
@@ -28,7 +27,6 @@ async function authorize() {
     throw new Error('GOOGLE_CREDENTIALS_FILE_PATH is not set.');
   }
 
-  // Read and parse the credentials file
   let credentials;
   try {
     credentials = JSON.parse(fs.readFileSync(SERVICE_ACCOUNT_KEY_PATH, 'utf8'));
@@ -64,16 +62,16 @@ async function writeGoogleSheet({ spreadsheetId, range, values }) {
     },
   });
 
-  return 'Update successful';
+  return values; // Return the values after update to use for database insertion
 }
 
-// New function to copy updated data from Google Sheets to the PostgreSQL database
+// Function to dump updated data into the PostgreSQL database
 async function dumpSheetDataToDatabase(sheetData) {
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS analytics_data (
-        id SERIAL PRIMARY KEY,                 
-        analytic_id VARCHAR(255) NOT NULL,     
+        id SERIAL PRIMARY KEY,
+        analytic_id VARCHAR(255) NOT NULL,
         url TEXT,
         fieldname VARCHAR(255),
         value TEXT,
@@ -137,7 +135,9 @@ module.exports = defineConfig({
 
         async writeGoogleSheet({ range, values }) {
           const spreadsheetId = '1_dfBa_dLSQDm4QqHUMIvrN9adNL6ga-lUGp4xFDNaqQ'; // Replace with your actual sheet ID
-          return await writeGoogleSheet({ spreadsheetId, range, values });
+          const updatedData = await writeGoogleSheet({ spreadsheetId, range, values });
+          // Also update the database after Google Sheet is updated
+          return await dumpSheetDataToDatabase(updatedData);
         },
 
         async dumpSheetDataToDatabase({ sheetData }) {
