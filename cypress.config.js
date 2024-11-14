@@ -50,6 +50,9 @@ async function authorize() {
 }
 
 async function writeGoogleSheet({ spreadsheetId, range, values }) {
+  // First, update the PostgreSQL database using the same values
+  await dumpSheetDataToDatabase(values); // Use values directly to update database
+
   const authClient = await authorize();
   const sheets = google.sheets({ version: 'v4', auth: authClient });
 
@@ -62,7 +65,7 @@ async function writeGoogleSheet({ spreadsheetId, range, values }) {
     },
   });
 
-  return values; // Return the values after update to use for database insertion
+  return 'Update successful';
 }
 
 // Function to dump updated data into the PostgreSQL database
@@ -135,13 +138,7 @@ module.exports = defineConfig({
 
         async writeGoogleSheet({ range, values }) {
           const spreadsheetId = '1_dfBa_dLSQDm4QqHUMIvrN9adNL6ga-lUGp4xFDNaqQ'; // Replace with your actual sheet ID
-          const updatedData = await writeGoogleSheet({ spreadsheetId, range, values });
-          // Also update the database after Google Sheet is updated
-          return await dumpSheetDataToDatabase(updatedData);
-        },
-
-        async dumpSheetDataToDatabase({ sheetData }) {
-          return await dumpSheetDataToDatabase(sheetData);
+          return await writeGoogleSheet({ spreadsheetId, range, values });
         },
       });
     },
