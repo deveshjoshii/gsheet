@@ -81,15 +81,14 @@ describe('Intercept request, perform actions, and process values', () => {
       // Final assertions after all requests are captured
       compareWithGoogleSheetData(googleSheetData, requestData);
 
-      // Dump the updated sheet data into the database
-      cy.task('dumpSheetDataToDatabase', { sheetData: googleSheetData })
+      // Update the Google Sheet and Database with the latest status data
+      cy.task('updateSheetAndDatabase') // Use the correct task to update both the Google Sheet and database
         .then(result => {
           cy.log(result);
         });
     });
   });
 });
-
 
 // Helper function to store intercepted request data
 function storeRequestData(interception, row, requestData, checkForEpAction = false) {
@@ -173,4 +172,3 @@ function compareWithGoogleSheetData(sheetData, requestData) {
     }
   });
 }
-
