@@ -49,10 +49,28 @@ async function authorize() {
   return auth.getClient();
 }
 
-async function writeGoogleSheet({ spreadsheetId, range, values }) {
-  // First, update the PostgreSQL database using the same values
-  await dumpSheetDataToDatabase(values); // Use values directly to update database
+async function readGoogleSheet() {
+  const authClient = await authorize();
+  const sheets = google.sheets({ version: 'v4', auth: authClient });
 
+  const spreadsheetId = '1_dfBa_dLSQDm4QqHUMIvrN9adNL6ga-lUGp4xFDNaqQ'; // Replace with your actual sheet ID
+  const sheetRange = 'Sheet1!A:F'; // Range in the sheet
+
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: sheetRange,
+  });
+
+  const rows = res.data.values;
+  if (!rows || rows.length === 0) {
+    console.log('No data found.');
+    return [];
+  }
+
+  return rows;
+}
+
+async function writeGoogleSheet({ spreadsheetId, range, values }) {
   const authClient = await authorize();
   const sheets = google.sheets({ version: 'v4', auth: authClient });
 
@@ -68,9 +86,10 @@ async function writeGoogleSheet({ spreadsheetId, range, values }) {
   return 'Update successful';
 }
 
-// Function to dump updated data into the PostgreSQL database
-async function dumpSheetDataToDatabase(sheetData) {
+// Function to insert data into the PostgreSQL database
+async function insertDataIntoDatabase(sheetData) {
   try {
+    // Ensure the database table exists
     await pool.query(`
       CREATE TABLE IF NOT EXISTS analytics_data (
         id SERIAL PRIMARY KEY,
@@ -96,14 +115,23 @@ async function dumpSheetDataToDatabase(sheetData) {
       const fieldname = row[2];
       const value = row[3];
       const action = row[4];
-      const status = row[5];
+      let status = row[5]; // Get current status
       const createdAt = moment().tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm:ss');
 
+      // Perform your action here (for example, change status based on some conditions)
+      if (status === 'Pending') {
+        status = 'Completed'; // Example action: change 'Pending' to 'Completed'
+      }
+
+      // Insert into database
       await pool.query(insertQuery, [analyticId, url, fieldname, value, action, status, createdAt]);
+
+      // Update the status in the sheet as well
+      row[5] = status; // Update the row with new status
     }
 
-    console.log('Data from Google Sheets dumped into the PostgreSQL database successfully');
-    return 'Data from Google Sheets dumped into the database successfully';
+    console.log('Data successfully inserted into the PostgreSQL database and sheet status updated');
+    return 'Data successfully inserted into the database and sheet status updated';
   } catch (error) {
     console.error('Failed to insert data into the PostgreSQL database:', error);
     throw error;
@@ -115,30 +143,28 @@ module.exports = defineConfig({
     baseUrl: 'https://www.credello.com',
     setupNodeEvents(on, config) {
       on('task', {
-        async readGoogleSheet({ range }) {
-          const authClient = await authorize();
-          const sheets = google.sheets({ version: 'v4', auth: authClient });
-
-          const spreadsheetId = '1_dfBa_dLSQDm4QqHUMIvrN9adNL6ga-lUGp4xFDNaqQ'; // Replace with your actual sheet ID
-          const sheetRange = range || 'Sheet1!A:F'; // Default range if none is passed
-
-          const res = await sheets.spreadsheets.values.get({
-            spreadsheetId,
-            range: sheetRange,
-          });
-
-          const rows = res.data.values;
-          if (!rows || rows.length === 0) {
-            console.log('No data found.');
-            return [];
-          }
-
-          return rows;
+        async readGoogleSheet() {
+          return await readGoogleSheet(); // Read sheet data
         },
 
         async writeGoogleSheet({ range, values }) {
           const spreadsheetId = '1_dfBa_dLSQDm4QqHUMIvrN9adNL6ga-lUGp4xFDNaqQ'; // Replace with your actual sheet ID
           return await writeGoogleSheet({ spreadsheetId, range, values });
+        },
+
+        async updateSheetAndDatabase() {
+          // Step 1: Read data from Google Sheet
+          const sheetData = await readGoogleSheet();
+
+          // Step 2: Insert data into database and update the status column
+          await insertDataIntoDatabase(sheetData);
+
+          // Step 3: Write updated data (including the status) back to Google Sheet
+          const spreadsheetId = '1_dfBa_dLSQDm4QqHUMIvrN9adNL6ga-lUGp4xFDNaqQ'; // Replace with your actual sheet ID
+          const range = 'Sheet1!A:F'; // Replace with the correct range
+          await writeGoogleSheet({ spreadsheetId, range, values: sheetData });
+
+          return 'Sheet and database updated successfully';
         },
       });
     },
