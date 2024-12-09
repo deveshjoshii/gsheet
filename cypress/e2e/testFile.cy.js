@@ -49,7 +49,7 @@ describe('Intercept request, perform actions, and process values', () => {
                 cy.wait(1000); // Wait for any actions post-click
 
                 // Intercept the request after the action and apply 'ep.Action' filter
-                cy.intercept('POST', '**https://analytics.google.com/g/collect**').as('requestAfterClick');
+                cy.intercept({ method: /GET|POST/, url: '**https://analytics.google.com/g/collect**' }).as('requestAfterClick');
                 cy.wait('@requestAfterClick', { timeout: 10000 }).then((interception) => {
                   storeRequestData(interception, row, requestData, true); // Pass true to check 'ep.Action' after click
                 });
@@ -63,7 +63,7 @@ describe('Intercept request, perform actions, and process values', () => {
                 cy.wait(1000);
 
                 // Intercept the request after the action and apply 'ep.Action' filter
-                cy.intercept('POST', '**https://analytics.google.com/g/collect**').as('requestAfterType');
+                cy.intercept({ method: /GET|POST/, url: '**https://analytics.google.com/g/collect**' }).as('requestAfterType');
                 cy.wait('@requestAfterType', { timeout: 10000 }).then((interception) => {
                   storeRequestData(interception, row, requestData, true); // Pass true to check 'ep.Action' after typing
                 });
@@ -71,7 +71,7 @@ describe('Intercept request, perform actions, and process values', () => {
           }
         } else {
           // If no action, intercept the request without checking 'ep.Action'
-          cy.intercept('POST', '**https://analytics.google.com/g/collect**').as('requestWithoutAction');
+          cy.intercept({ method: /GET|POST/, url: '**https://analytics.google.com/g/collect**' }).as('requestWithoutAction');
           cy.wait('@requestWithoutAction', { timeout: 10000 }).then((interception) => {
             storeRequestData(interception, row, requestData, false); // Pass false to skip 'ep.Action' check
           });
@@ -106,7 +106,7 @@ function storeRequestData(interception, row, requestData, checkForEpAction = fal
   cy.log('Extracted Parameters: ' + JSON.stringify(extractedData));
 
   // Only filter by 'ep.Action' if specified
-  if (checkForEpAction && (!extractedData['ep.Action'] || !extractedData['ep.Label'] || !extractedData['ep.Category'])) {
+  if (checkForEpAction && (!extractedData['ep.Action'] || !extractedData['ep.Label'] || !extractedData['ep.Category'] || !extractedData['ep.click_item'])) {
     cy.log('Skipping this request, as it does not contain ep.Action.');
     return; // Skip requests without 'ep.Action' after actions
   }
