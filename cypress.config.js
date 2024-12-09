@@ -140,7 +140,7 @@ async function insertDataIntoDatabase(sheetData) {
 
 module.exports = defineConfig({
   e2e: {
-    baseUrl: 'https://www.credello.com',
+    baseUrl: 'https://chipadvisorreffered.smallbizvoices.com/',
     setupNodeEvents(on, config) {
       on('task', {
         async readGoogleSheet() {
