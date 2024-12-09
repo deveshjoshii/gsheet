@@ -6,7 +6,7 @@ describe('Intercept request, perform actions, and process values', () => {
     // Fetch data from Google Sheets before running tests
     cy.task('readGoogleSheet', { range: 'Sheet1!A:F' }).then((rows) => {
       googleSheetData = rows; // Store the data from Google Sheets
-      cy.log('Fetched data from Google Sheets:', googleSheetData);
+      cy.log('Fetched data from Google Sheets:', JSON.stringify(googleSheetData));
     });
   });
 
@@ -33,6 +33,8 @@ describe('Intercept request, perform actions, and process values', () => {
       const value = row[3];      // Assuming 'Value' is in the fourth column
       const action = row[4];     // Assuming 'Action' is in the fifth column
       const status = row[5];     // Assuming 'Status' is in the sixth column
+
+      cy.log(`Processing row ${index + 1}: URL = ${urlToVisit}, Action = ${action}`);
 
       // Visit the page
       cy.visit(urlToVisit).then(() => {
@@ -79,12 +81,13 @@ describe('Intercept request, perform actions, and process values', () => {
       });
     }).then(() => {
       // Final assertions after all requests are captured
+      cy.log('Comparing captured data with Google Sheets...');
       compareWithGoogleSheetData(googleSheetData, requestData);
 
       // Update the Google Sheet and Database with the latest status data
       cy.task('updateSheetAndDatabase') // Use the correct task to update both the Google Sheet and database
         .then(result => {
-          cy.log(result);
+          cy.log('Update result:', result);
         });
     });
   });
@@ -121,7 +124,7 @@ function storeRequestData(interception, row, requestData, checkForEpAction = fal
     timestamp: interception.timestamp,
     params: extractedData,
   };
-  console.log('Current requestData:', requestData);
+  cy.log('Current requestData:', JSON.stringify(requestData));
   return extractedData;
 }
 
