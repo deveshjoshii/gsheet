@@ -140,7 +140,7 @@ async function insertDataIntoDatabase(sheetData) {
 
 module.exports = defineConfig({
   e2e: {
-    baseUrl: process.env.BASE_URL || 'https://dev1.credello.com/', // Default fallback if not provided
+    baseUrl: process.env.BASE_URL || 'https://www.google.com/', // Default fallback if not provided
     setupNodeEvents(on, config) {
       on('task', {
         async readGoogleSheet() {
