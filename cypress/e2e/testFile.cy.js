@@ -46,15 +46,20 @@ describe('Intercept request, perform actions, and process values', () => {
 
       if (actionType === 'click') {
         cy.get(objectLocator).should('exist').click({ force: true });
+        cy.wait(1000);
         i += 2; // Move to the next action
+        
       } else if (actionType === 'type') {
         cy.get(objectLocator).should('be.visible').type(value);
+        cy.wait(1000);
         i += 3; // Move to the next action
       } else if (actionType === 'select' || actionType === 'dropdown') {
         cy.get(objectLocator).should('exist').select(value); // Dropdown selection
+        cy.wait(1000);
         i += 3; // Move to the next action
       } else {
         cy.log(`Unsupported action type: ${actionType}`);
+        cy.wait(1000);
         i += 1; // Move to the next action (skip unknown action)
       }
     }
@@ -91,7 +96,7 @@ describe('Intercept request, perform actions, and process values', () => {
 
         // Improved request handling
         const waitForRequests = () => {
-          cy.wait('@analyticsRequests', { timeout: 60000 }).then((interception) => {
+          cy.wait('@analyticsRequests', { timeout: 50000 }).then((interception) => {
             storeRequestData(interception, row, requestData);
             capturedRequests++;
 
