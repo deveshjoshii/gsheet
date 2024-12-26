@@ -48,7 +48,6 @@ describe('Intercept request, perform actions, and process values', () => {
         cy.get(objectLocator).should('exist').click({ force: true });
         cy.wait(1000);
         i += 2; // Move to the next action
-        
       } else if (actionType === 'type') {
         cy.get(objectLocator).should('be.visible').type(value);
         cy.wait(1000);
@@ -77,13 +76,11 @@ describe('Intercept request, perform actions, and process values', () => {
     cy.wrap(googleSheetData.slice(1)).each((row, index) => {
       const urlToVisit = row[1]?.trim(); // URL column
       const actions = row[4]; // Actions column
-      const actionCount = actions ? actions.split('|').length / 3 : 0; // Count actions
 
       cy.log(`Processing row ${index + 1}: URL = ${urlToVisit || 'No URL'}, Actions = ${actions || 'No Actions'}`);
 
       // Create a promise for processing the current row
       const rowPromise = new Cypress.Promise((resolve) => {
-        let capturedRequests = 0;  // Reset capturedRequests for each row
         const requestPromises = []; // Store promises for each request
 
         if (urlToVisit) {
@@ -94,31 +91,21 @@ describe('Intercept request, perform actions, and process values', () => {
           performActions(actions);
         }
 
-        // Improved request handling
+        // Request handling
         const waitForRequests = () => {
           cy.wait('@analyticsRequests', { timeout: 50000 }).then((interception) => {
             storeRequestData(interception, row, requestData);
-            capturedRequests++;
 
             // Capture the promise for the current request
             requestPromises.push(Promise.resolve());
-
-            if (capturedRequests < actionCount) {
-              waitForRequests(); // Recursively wait for remaining requests
-            } else {
-              // Only resolve when all requests are captured
-              Promise.all(requestPromises).then(() => {
-                resolve(); // Resolve once all requests are captured
-              });
-            }
+            waitForRequests(); // Recursively wait for additional requests
           });
         };
 
-        if (actionCount > 0) {
-          waitForRequests();
-        } else {
-          resolve(); // Resolve immediately if no actions
-        }
+        waitForRequests();
+        Promise.all(requestPromises).then(() => {
+          resolve(); // Resolve once all requests are captured
+        });
       });
 
       rowProcessingPromises.push(rowPromise);
