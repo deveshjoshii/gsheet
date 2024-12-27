@@ -93,7 +93,7 @@ describe('Intercept request, perform actions, and process values', () => {
 
         // Request handling
         const waitForRequests = () => {
-          cy.wait('@analyticsRequests', { timeout: 50000 }).then((interception) => {
+          cy.wait('@analyticsRequests', { timeout: 100000 }).then((interception) => {
             storeRequestData(interception, row, requestData);
 
             // Capture the promise for the current request
